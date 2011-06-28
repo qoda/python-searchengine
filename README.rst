@@ -4,7 +4,7 @@ NB: UNDER DEVELOPMENT
 
 python-searchengine
 ===================
-A simple search engine which utilises xapian, a custon html scraper and simple
+A simple search engine which utilises xapian, a custom html scraper and simple
 crawler.
 
 Requirements
