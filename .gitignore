@@ -1,0 +1,14 @@
+bin/
+build/
+develop-eggs/
+downloads/
+eggs/
+parts/
+.DS_Store
+*.egg-info/
+index/
+
+.installed.cfg
+*.sqlite
+*.pyc
+*.komodoproject
