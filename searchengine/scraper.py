@@ -57,7 +57,7 @@ class TagSelector(HTMLParser):
     
     def get_data(self):
         """
-        Join list and return as a string.
+        Return a 
         """
         return self.content_dict
 
@@ -86,4 +86,8 @@ class HTMLScraper(object):
         html_parser = TagSelector()
         html_parser.feed(html_content)
         
-        return html_parser.get_data()
+        # get the content and update with the url scraped
+        parsed_content = html_parser.get_data()
+        parsed_content.update({'url': self.url})
+        
+        return parsed_content

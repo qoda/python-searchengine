@@ -12,7 +12,7 @@ setup(
     packages = find_packages(),
     dependency_links = [],
     install_requires = [
-        'xapian',
+        'whoosh',
     ],
     include_package_data=True,
     classifiers = [

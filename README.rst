@@ -4,7 +4,7 @@ NB: UNDER DEVELOPMENT
 
 python-searchengine
 ===================
-A simple search engine which utilises xapian, a custom html scraper and simple
+A simple search engine which utilises whoosh, a custom html scraper and simple
 crawler.
 
 Requirements
@@ -14,7 +14,7 @@ System:
 ~~~~~~~
 
 - python 2.5+
-- xapian
+- whoosh
 
 Installation
 ------------
@@ -36,23 +36,23 @@ Simple Usage::
     from searchengine import SearchEngine
     
     search_engine = SearchEngine()
-    search_engine.search('"Python Search Engine" + GitHub -bitbucket')
+    search_engine.search('"Python Search Engine" GitHub -bitbucket')
         
 2. Use from method::
         
     from searchengine import searchengine
     
-    searchengine(query='"Python Search Engine" + GitHub -bitbucket')
+    searchengine(query='"Python Search Engine" GitHub -bitbucket')
         
 3. Use from commandline (installed)::
         
-    $ python -m searchengine.main '"Python Search Engine" + GitHub -bitbucket'
+    $ python -m searchengine.main '"Python Search Engine" GitHub -bitbucket'
     
 Required Arguments:
 ~~~~~~~~~~~~~~~~~~~
 
 - **query** - query the index
-        
+
 Optional Arguments:
 ~~~~~~~~~~~~~~~~~~~
 
