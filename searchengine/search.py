@@ -10,9 +10,8 @@ from whoosh.fields import *
 from whoosh import qparser
 from whoosh.store import LockError
 
-from rsscrawler.logger import Logging
-from rsscrawler.settings import INDEX_PATH
-from rsscrawler.utils import epoch
+from searchengine.logger import Logging
+from searchengine.settings import INDEX_PATH
 
 class ContentSchema(Schema):
     url_id=ID(unique=True),
@@ -80,10 +79,7 @@ class SearchIndex(object):
         # add the document to the search index
         writer.add_document(
             id=unicode(md5(url).hexdigest()),
-            date=epoch(date),
-            title=unicode(title),
-            url=unicode(url),
-            feed=unicode(feed),
+            text="",
         )
         
         # commit the data to index if specified
@@ -94,7 +90,6 @@ class SearchIndex(object):
             self.log.error("SearchIndex", "commit", "Index returned a LockError")
             time.sleep(0.5)
             self.add(date, title, url, feed)
-            return False
     
     def get(self, id):
         """
