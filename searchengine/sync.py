@@ -19,25 +19,28 @@ class SyncDatabase(object):
         
     def exists(self, url):
         host_name = urlparse.urlparse(url)
-        if self.test:
-            connection = httplib.HTTPConnection(self.url.hostname, timeout=CONNECTION_TIMEOUT)
-            url_handler = urllib2.urlopen(self.url)
-            html_content = url_handler.read()
-            url_handler.close()
+        connection = httplib.HTTPConnection(self.url.hostname, timeout=CONNECTION_TIMEOUT)
+        url_handler = urllib2.urlopen(self.url)
+        html_content = url_handler.read()
+        url_handler.close()
     
     def run():
         """
         Iterate through the urls and add them to the database to be crawled.
         """
-        print "syncing the databse from %s..." % self.path
+        self.log.info("SyncDatabase", "run", "Syncing to database from %s started." % self.path)
         
         # open the file and add each line to the database
         file_buffer = open(self.path)
         for line in file_buffer.readlines():
+            if self.test:
+                self.exists(line)
             dosomthing
         
-        print "sync completed."
+        self.log.info("SyncDatabase", "run", "Syncing to database completed.")
         
+        if raw_input("%s urls added, %s urls rejected. Would you like to retry rejected urls (Y|N)?" % success_count, failed_count).lower() == "y":
+            dosomthing
     
 if __name__ == '__main__':
     

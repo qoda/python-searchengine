@@ -14,6 +14,10 @@ from rsscrawler.logger import Logging
 from rsscrawler.settings import INDEX_PATH
 from rsscrawler.utils import epoch
 
+class ContentSchema(Schema):
+    url_id=ID(unique=True),
+    text=TEXT(),
+
 class SearchIndex(object):
     """
     Object utilising Whoosh (http://woosh.ca/) to create a search index of all
@@ -23,13 +27,7 @@ class SearchIndex(object):
         """
         Instantiate the whoosh schema and writer and create/open the index.
         """
-        self.schema = kwargs.get('schema', Schema(
-            id=ID(unique=True),
-            date=STORED(),
-            title=TEXT(stored=True),
-            url=STORED(),
-            feed=STORED(),
-        ))
+        self.schema = kwargs.get('schema', ContentSchema())
         self.log = kwargs.get('log', Logging())
         
         # get the absolute path and create the dir if required
@@ -62,11 +60,10 @@ class SearchIndex(object):
             time.sleep(0.5)
             self.commit(writer)
         
-    def add(self, date, title, url, feed, commit=True):
+    def add(self, *args, **kwargs):
         """
-        Add an item to the index. Title, Path & Content are required arguments.
-        If commit is set to False, remember to commit the data to the index
-        manually using self.commit().
+        Add an item to the index. If commit is set to False, remember to commit
+        the data to the index manually using self.commit().
         """
         # instantiate the writer
         try:
@@ -74,8 +71,11 @@ class SearchIndex(object):
         except LockError:
             self.log.error("SearchIndex", "commit", "Index returned a LockError")
             time.sleep(0.5)
-            self.add(date, title, url, feed)
-            return False
+            self.add(*args, **kwargs)
+        
+        # check that the correct kwargs have been given
+        for k in kwargs.keys():
+            print k
         
         # add the document to the search index
         writer.add_document(

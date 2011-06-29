@@ -14,10 +14,6 @@ def dummy_search_index():
         index_path="index_test",
         log=Logging(log_file_name="test.log"),
     )
-    search_index = SearchIndex(
-        index_path="index_test",
-        log=Logging(log_file_name="test.log"),
-    )
     search_index.add(
         date= time.strptime("1 Jan 11", "%d %b %y"),
         title='Testing ABC',
