@@ -1,44 +1,90 @@
 #!/usr/bin/env python
 
 import os
+import shutil
 import time
 import unittest
 import urllib
 
-from main import SearchEngine, searchengine
-from scraper import HTMLScraper, TagSelector
-from search import SearchIndex
+from searchengine.db import MongoDB
+from searchengine.logger import Logging
+from searchengine.main import SearchEngine, searchengine
+from searchengine.scraper import HTMLScraper, TagSelector
+from searchengine.search import SearchIndex
 
 def dummy_search_index():
     search_index = SearchIndex(
-        index_path="index_test",
+        index_path="test",
         log=Logging(log_file_name="test.log"),
     )
     search_index.add(
-        date= time.strptime("1 Jan 11", "%d %b %y"),
-        title='Testing ABC',
-        url='http://www.google.com',
-        feed='http://www.google.com',
-        commit=True,
+        content_id=u'1',
+        content=u'Testing ABC',
     )
     search_index.add(
-        date= time.strptime("1 Jan 11", "%d %b %y"),
-        title='Testing DEF',
-        url='http://www.google2.com',
-        feed='http://www.google2.com',
-        commit=True,
+        content_id=u'2',
+        content=u'Testing DEF',
     )
     return search_index
 
-class MainTestCase(unittest.TestCase):
+def dummy_db(data):
+    database = MongoDB(
+        database_name="test_database",
+        collection_name="test_collection"
+    )
+    id = database.insert(data)
+    return database, id
+
+class MongoDBTestCase(unittest.TestCase):
     def setUp(self):
-        pass
+        self.data1 = {"text": "ABC", "tags": ["test", "python"]}
+        self.database, self.id1 = dummy_db(self.data1)
+        self.data2 = {"text": "DEF", "tags": ["test", "mongo"]}
+        self.database, self.id2 = dummy_db(self.data2)
     
-    def test_search_engine(self):
-        pass
+    def test_insert(self):
+        
+        # test that the inserts in setUp return the correct number of entries
+        self.assertEqual(self.database.find(self.data1).count(), 1)
+        self.assertEqual(self.database.find().count(), 2)
+        
+    def test_update(self):
+        
+        # test updating an entry using the id_obj as a unique identifier
+        self.database.update(id_obj=self.id1, data={"text": "CBA"})
+        self.assertEqual(self.database.find({"text": "CBA"}).count(), 1)
+        
+        # test updating an entry using the data as a unique identifier
+        self.database.update(query_data={"text": "CBA"}, data={"text": "ABC"})
+        self.assertEqual(self.database.find({"text": "ABC"}).count(), 1)
+        
+    def test_remove(self):
+        
+        # test removing a single entry using the id_obj param as unique identifier
+        self.database.remove(id_obj=self.id1)
+        self.assertEqual(self.database.find().count(), 1)
+        
+        # test removing a single entry using the query_dict param as unique identifier
+        self.database.remove(query_data={"text": "DEF"})
+        self.assertEqual(self.database.find().count(), 0)
+        
+    def test_find(self):
+        self.assertEqual(self.database.find().count(), 2)
+        self.assertEqual(self.database.find({"text": "ABC"}).count(), 1)
+    
+    def test_get(self):
+        entry1 = self.database.get(id_obj=self.id1)
+        entry2 = self.database.get(query_data=self.data2)
+        
+        # test that a single entry dict is returned using a query_dict and id_obj to find one entry
+        self.assertEqual(entry1['text'], "ABC")
+        self.assertTrue(isinstance(entry1, dict))
+        self.assertEqual(entry2['text'], "DEF")
+        self.assertTrue(isinstance(entry2, dict))
     
     def tearDown(self):
-        pass
+        self.database.remove(query_data={"text": "ABC"})
+        self.database.remove(query_data={"text": "DEF"})
 
 class ScraperTestCase(unittest.TestCase):
     def setUp(self):
@@ -92,14 +138,18 @@ class SearchTestCase(unittest.TestCase):
         self.search_index = dummy_search_index()
         
     def test_get(self):
-        id = md5("http://www.google.com").hexdigest()
-        result = self.search_index.get(id)
+        result = self.search_index.get(1)
         
-        # test that an obj is returned by id
+        # test that an obj is returned by id and is a dict
+        self.assertNotEqual(result, {})
         self.assertTrue(isinstance(result, dict))
         
         # test that only one obj is returned
-        self.assertEqual(result['title'], "Testing ABC")
+        self.assertEqual(int(result['content_id']), 1)
+        
+    def test_add(self):
+        with self.assertRaises(Exception):
+            self.search_index.add(id2=1)
         
     def test_search(self):
         
@@ -119,11 +169,6 @@ class SearchTestCase(unittest.TestCase):
         # test that the output contains two results
         results = self.search_index.search("Testing")
         self.assertEqual(len(results), 2)
-        
-        # test that exclusions are ommit the correct results
-        results = self.search_index.search("Testing -ABC")
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]['title'], "Testing DEF")
         
     def tearDown(self):
         shutil.rmtree(self.search_index.index_path)
