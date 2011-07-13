@@ -13,6 +13,7 @@ setup(
     dependency_links = [],
     install_requires = [
         'whoosh',
+        'pymongo',
     ],
     include_package_data=True,
     classifiers = [
