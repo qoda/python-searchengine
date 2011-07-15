@@ -11,6 +11,7 @@ from searchengine.logger import Logging
 from searchengine.main import SearchEngine, searchengine
 from searchengine.scraper import HTMLScraper, TagSelector
 from searchengine.search import SearchIndex
+from searchengine.sync import SyncDB
 
 def dummy_search_index():
     search_index = SearchIndex(
@@ -29,8 +30,10 @@ def dummy_search_index():
 
 def dummy_db(data):
     database = MongoDB(
+        log=Logging(log_file_name="test.log"),
         database_name="test_database",
-        collection_name="test_collection"
+        collection_name="test_collection_content",
+        unique_indexes=['text'],
     )
     id = database.insert(data)
     return database, id
@@ -41,12 +44,19 @@ class MongoDBTestCase(unittest.TestCase):
         self.database, self.id1 = dummy_db(self.data1)
         self.data2 = {"text": "DEF", "tags": ["test", "mongo"]}
         self.database, self.id2 = dummy_db(self.data2)
+        
+        # entry should not be created as text is not unique
+        self.data3 = {"text": "DEF", "tags": ["python", "mongo_indexing"]}
+        self.database, self.id3 = dummy_db(self.data3)
     
     def test_insert(self):
         
         # test that the inserts in setUp return the correct number of entries
         self.assertEqual(self.database.find(self.data1).count(), 1)
         self.assertEqual(self.database.find().count(), 2)
+        
+        # test the correct indexes were set on the collection
+        self.assertTrue(u"text_1" in self.database.collection.index_information().keys())
         
     def test_update(self):
         
@@ -83,8 +93,7 @@ class MongoDBTestCase(unittest.TestCase):
         self.assertTrue(isinstance(entry2, dict))
     
     def tearDown(self):
-        self.database.remove(query_data={"text": "ABC"})
-        self.database.remove(query_data={"text": "DEF"})
+        self.database.remove()
 
 class ScraperTestCase(unittest.TestCase):
     def setUp(self):
@@ -173,6 +182,39 @@ class SearchTestCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.search_index.index_path)
         self.search_index.close()
+        
+class SyncDBTestCase(unittest.TestCase):
+    def setUp(self):
+        self.file_path = "/tmp/test.txt"
+        self.syncdb = SyncDB(
+            file_path=self.file_path,
+            database=MongoDB(
+                collection_name='test_collection_urls',
+                database_name='test_database',
+            ),
+            test_exists=True,
+        )
+        
+        # create a dummy file to parse through
+        file_buffer = open(self.file_path, "w+")
+        file_buffer.write('http://www.google.com \r\n http://www.example.com')
+        file_buffer.close()
+        
+    def test_exists(self):
+        
+        # test that the url is tested as existing correctly
+        self.assertTrue(self.syncdb.exists("http://www.google.com"))
+        self.assertFalse(self.syncdb.exists("http://www.g.com"))
+        
+    def test_run(self):
+        
+        # test that the url is added to the db and the file is parsed correctly
+        self.syncdb.run()
+        self.assertEqual(self.syncdb.database.find().count(), 2)
+    
+    def tearDown(self):
+        self.syncdb.database.remove()
+        os.remove(self.file_path)
 
 if __name__ == '__main__':
     unittest.main()
