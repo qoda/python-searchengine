@@ -14,7 +14,12 @@ System:
 ~~~~~~~
 
 - python 2.5+
+
+Python:
+~~~~~~~
+
 - whoosh
+- pymongo
 
 Installation
 ------------
@@ -45,7 +50,7 @@ Simple Usage::
     searchengine(query='"Python Search Engine" GitHub -bitbucket')
         
 3. Use from commandline (installed)::
-        
+    
     $ python -m searchengine.main '"Python Search Engine" GitHub -bitbucket'
     
 Required Arguments:
