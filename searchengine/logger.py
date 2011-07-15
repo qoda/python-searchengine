@@ -3,7 +3,7 @@
 import logging
 import os
 
-from rsscrawler.settings import LOG_FILE_NAME, LOG_FORMAT, LOG_PATH, DEBUG
+from searchengine.settings import LOG_FILE_NAME, LOG_FORMAT, LOG_PATH, DEBUG
 
 class Logging(object):
     """
@@ -42,15 +42,20 @@ class Logging(object):
             if self.debug:
                 logger.setLevel(logging.INFO)
                 logger.info(message, extra=extras)
-        if type == 'warning':
+                
+        elif type == 'warning':
             logger.setLevel(logging.WARNING)
             logger.warning(message, extra=extras)
-        if type == 'error':
+            
+        elif type == 'error':
             logger.setLevel(logging.ERROR)
             logger.error(message, extra=extras)
-        if type == 'critical':
+            raise Exception("%s: %s" % (type.upper(), message))
+            
+        elif type == 'critical':
             logger.setLevel(logging.CRITICAL)
             logger.critical(message, extra=extras)
+            raise Exception("%s: %s" % (type.upper(), message))
     
     def info(self, cls_name, method_name, message):
         self.log(cls_name, method_name, message, type='info')
