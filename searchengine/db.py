@@ -10,17 +10,26 @@ class MongoDB(object):
     A simple MongoDB wrapper which establishes a connection to a specified host
     and port, adds, update and delete data and query the database.
     """
-    def __init__(self, database_name, collection_name, *args, **kwargs):
+    def __init__(self, collection_name, *args, **kwargs):
+        self.log = kwargs.get('log', Logging())
         self.host = kwargs.get('host', MONGO_HOST)
         self.port = kwargs.get('port', MONGO_PORT)
+        self.database_name = kwargs.get('database_name', MONGO_NAME)
         self.connection = kwargs.get('connection', Connection(host=self.host, port=self.port))
-        self.database = self.connection[database_name]
+        self.database = self.connection[self.database_name]
         self.collection = self.database[collection_name]
-    
+        self.unique_indexes = kwargs.get("unique_indexes", [])
+        
+        # create all required indexes
+        for index in self.unique_indexes:
+            if self.collection.ensure_index(index, unique=True):
+                self.log.info("MongoDB", "insert", "New db index created: %s" % index)
+        
     def insert(self, data):
         """
-        Add a data dict to the specified database.
+        Add a data dict and indexes to the specified database.
         """
+        
         return self.collection.insert(data)
         
     def update(self, data, id_obj=None, query_data=None):
