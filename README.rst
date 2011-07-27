@@ -5,7 +5,7 @@ NB: UNDER DEVELOPMENT
 python-searchengine
 ===================
 A simple search engine which utilises whoosh, a custom html scraper and simple
-crawler.
+crawler/spider.
 
 Requirements
 ------------
@@ -13,7 +13,7 @@ Requirements
 System:
 ~~~~~~~
 
-- python 2.5+
+- python 2.6+
 
 Python:
 ~~~~~~~
@@ -62,4 +62,3 @@ Optional Arguments:
 ~~~~~~~~~~~~~~~~~~~
 
 - **index** (default: /path/to/app/index)
-    
