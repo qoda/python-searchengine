@@ -6,16 +6,12 @@ import os
 import time
 
 from whoosh.index import create_in, open_dir
-from whoosh.fields import *
+from whoosh.fields import Schema, TEXT, ID
 from whoosh import qparser
 from whoosh.store import LockError
 
 from searchengine.logger import Logging
 from searchengine.settings import INDEX_PATH
-
-class ContentSchema(Schema):
-    url_id=ID(unique=True),
-    text=TEXT(),
 
 class SearchIndex(object):
     """
@@ -26,7 +22,10 @@ class SearchIndex(object):
         """
         Instantiate the whoosh schema and writer and create/open the index.
         """
-        self.schema = kwargs.get('schema', ContentSchema())
+        self.schema = kwargs.get('schema', Schema(
+            content_id=ID(stored=True, unique=True),
+            content=TEXT(),
+        ))
         self.log = kwargs.get('log', Logging())
         
         # get the absolute path and create the dir if required
@@ -55,7 +54,7 @@ class SearchIndex(object):
             writer.commit()
             return True
         except LockError, e:
-            self.log.error("SearchIndex", "commit", e)
+            self.log.warning("SearchIndex", "commit", e)
             time.sleep(0.5)
             self.commit(writer)
         
@@ -68,35 +67,28 @@ class SearchIndex(object):
         try:
             writer =  self.index_obj.writer()
         except LockError:
-            self.log.error("SearchIndex", "commit", "Index returned a LockError")
+            self.log.warning("SearchIndex", "commit", "Index returned a LockError")
             time.sleep(0.5)
             self.add(*args, **kwargs)
         
         # check that the correct kwargs have been given
         for k in kwargs.keys():
-            print k
+            if not k in self.schema:
+                self.log.error("SearchIndex", "add", "'%s' doesn't match the default scheam fields." % k)
         
-        # add the document to the search index
+        # add the document to the search index and commit
         writer.add_document(
-            id=unicode(md5(url).hexdigest()),
-            text="",
+            content_id=kwargs['content_id'],
+            content=kwargs['content']
         )
-        
-        # commit the data to index if specified
-        try:
-            writer.commit()
-            return True
-        except LockError:
-            self.log.error("SearchIndex", "commit", "Index returned a LockError")
-            time.sleep(0.5)
-            self.add(date, title, url, feed)
+        self.commit(writer)
     
     def get(self, id):
         """
         Get an index object by its hashed id.
         """
         searcher = self.index_obj.searcher()
-        result = searcher.document(id=unicode(id))
+        result = searcher.document(content_id=unicode(id))
         searcher.close()
         return result
     
@@ -108,7 +100,7 @@ class SearchIndex(object):
             query = unicode(query)
         except UnicodeDecodeError:
             query = ""
-        parser = qparser.QueryParser("title", self.index_obj.schema)
+        parser = qparser.QueryParser("content", self.index_obj.schema)
         
         return parser.parse(query)
     
@@ -119,25 +111,9 @@ class SearchIndex(object):
         searcher = self.index_obj.searcher()
         
         # create a results list from the search results
-        query = query.lower()
-        query_list = [k for k in query.split("-")]
-        keywords = query_list[0]
-        exclusions = [e.rstrip().lstrip() for e in query_list[1:] if e not in keywords]
-        
         results = []
-        for result in searcher.search(self.parse_query(keywords)):
-            exclude_result = False
-            for exclusion in exclusions:
-                try:
-                    if str(exclusion) in result['title'].lower():
-                        exclude_result = True
-                        break
-                except TypeError:
-                    pass
-            
-            if not exclude_result:
-                results.append(dict(result))
-        
+        for result in searcher.search(self.parse_query(query)):
+            results.append(dict(result))
         searcher.close()
         return results
     
