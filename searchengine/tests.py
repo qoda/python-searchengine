@@ -186,7 +186,16 @@ class SearchTestCase(unittest.TestCase):
 class SyncDBTestCase(unittest.TestCase):
     def setUp(self):
         self.file_path = "/tmp/test.txt"
+        
+        # create a dummy file to parse through
+        file_buffer = open(self.file_path, "w+")
+        file_buffer.writelines(['http://www.google.com', '\r\n', 'http://www.example.com'])
+        file_buffer.close()
+        
+        # instantiate the syncdb class
         self.syncdb = SyncDB(
+            log=Logging(log_file_name="test.log"),
+            retry_failed=0,
             file_path=self.file_path,
             database=MongoDB(
                 collection_name='test_collection_urls',
@@ -195,10 +204,31 @@ class SyncDBTestCase(unittest.TestCase):
             test_exists=True,
         )
         
-        # create a dummy file to parse through
-        file_buffer = open(self.file_path, "w+")
-        file_buffer.write('http://www.google.com \r\n http://www.example.com')
-        file_buffer.close()
+    def test_exists(self):
+        
+        # test that the url is tested as existing correctly
+        self.assertTrue(self.syncdb.exists("http://www.google.com"))
+        self.assertFalse(self.syncdb.exists("http://www.g.com"))
+        
+    def test_run(self):
+        
+        # test that the url is added to the db and the file is parsed correctly
+        self.syncdb.run()
+        self.assertEqual(self.syncdb.database.find().count(), 2)
+    
+    def tearDown(self):
+        self.syncdb.database.remove()
+        os.remove(self.file_path)
+        
+class SpiderTestCase(unittest.TestCase):
+    def setUp(self):
+        self.spider = Spider(
+            log=Logging(log_file_name="test.log"),
+            database=MongoDB(
+                collection_name='test_collection_urls',
+                database_name='test_database',
+            )
+        )
         
     def test_exists(self):
         
