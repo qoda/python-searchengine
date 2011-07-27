@@ -29,7 +29,6 @@ class MongoDB(object):
         """
         Add a data dict and indexes to the specified database.
         """
-        
         return self.collection.insert(data)
         
     def update(self, data, id_obj=None, query_data=None):
