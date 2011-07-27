@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
-from HTMLParser import HTMLParser
+from HTMLParser import HTMLParser, HTMLParseError
 import optparse
 import urllib2
+
+from searchengine.logger import Logging
 
 class TagSelector(HTMLParser):
     """
@@ -56,9 +58,6 @@ class TagSelector(HTMLParser):
             self.content_dict['content'].append(data)
     
     def get_data(self):
-        """
-        Return a 
-        """
         return self.content_dict
 
 class HTMLScraper(object):
@@ -66,13 +65,18 @@ class HTMLScraper(object):
     A simple HTML Scraper class to get visable text from a given URL.
     """
     def __init__(self, url, *args, **kwargs):
+        self.log = kwargs.get('log', Logging())
         self.url = url
         
     def get_url_content(self):
         """
         Open and read the content of a URL.
         """
-        url_handler = urllib2.urlopen(self.url)
+        try:
+            url_handler = urllib2.urlopen(self.url)
+        except URLError, e:
+            self.log.warning("HTMLScraper", "get_url_content", e)
+        
         html_content = url_handler.read()
         url_handler.close()
         
@@ -84,7 +88,10 @@ class HTMLScraper(object):
         """
         html_content = self.get_url_content()
         html_parser = TagSelector()
-        html_parser.feed(html_content)
+        try:
+            html_parser.feed(unicode(html_content, errors='replace'))
+        except HTMLParseError, e:
+            self.log.warning("HTMLScraper", "get_content", e)
         
         # get the content and update with the url scraped
         parsed_content = html_parser.get_data()
