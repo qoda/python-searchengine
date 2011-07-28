@@ -15,21 +15,25 @@ class Spider(object):
     def __init__(self, *args, **kwargs):
         self.log = kwargs.get('log', Logging(verbose=kwargs.get('verbose', False)))
         self.database = kwargs.get('database', MongoDB(collection_name="crawler_urls"))
-        self.scraper = kwargs.get('database', MongoDB(collection_name="crawler_urls"))
         
     def get_links(self, url):
         """
         Use the scraper class to scrape the links for the given url.
         """
         scraper = HTMLScraper(url=url)
-        links = [link[1] for link in scraper.get_content()['links']]
+        content =  scraper.get_content()
+        
+        if not content:
+            return []
+        
+        links = [link[1] for link in content['links']]
         return links
     
     def is_external_link(self, base_url, url):
         """
         Test if the link is an external link.
         """
-        return urlparse(base_url).hostname == urlparse(url).hostname
+        return urlparse(base_url).hostname != urlparse(url).hostname
     
     def run(self):
         """
@@ -42,6 +46,7 @@ class Spider(object):
             self.log.error("Spider", "run", "No urls found to spider.")
             
         # start spidering the urls
+        external_urls = [obj['url'] for obj in obj_list]
         self.log.info("Spider", "run", "Started spidering %s sites for new urls" % len(obj_list))
         for obj in obj_list:
             links = self.get_links(obj['url'])
@@ -52,24 +57,33 @@ class Spider(object):
                     link = urljoin(obj['url'], link)
                 
                 # check the link has not already been added, else add it
-                if link not in obj['sub_urls'] and not self.is_external_link(obj['url'], link):
-                    self.log.info("Spider", "run", "Found new internal url for %s: %s" % (obj['url'], link))
-                    new_url_count += 1
-                    obj['sub_urls'].append(link)
-                    self.database.update(query_data={'_id': obj['_id']}, data={'sub_urls': obj['sub_urls']})
+                if self.is_external_link(obj['url'], link):
+                    external_url = "%s://%s" % (urlparse(link).scheme, urlparse(link).hostname)
+                    if external_url not in external_urls:
+                        self.log.info("Spider", "run", "Found new external url: %s" % external_url)
+                        new_url_count += 1
+                        self.database.insert({
+                            'url': external_url,
+                            'last_crawled': None,
+                            'valid': True,
+                            'sub_urls': [],
+                        })
+                        external_urls.append(external_url)
                     
                 # if its an external link add it to the database
-                elif self.is_external_link(obj['url'], link):
-                    self.log.info("Spider", "run", "Found new external url: %s" % link)
-                    new_url_count += 1
-                    self.database.insert({
-                        'url': link,
-                        'last_crawled': None,
-                        'valid': True,
-                        'sub_urls': [],
-                    })
+                else:
+                    if link not in obj['sub_urls']:
+                        self.log.info("Spider", "run", "Found new internal url for %s: %s" % (obj['url'], link))
+                        new_url_count += 1
+                        obj['sub_urls'].append(link)
+                        self.database.update(query_data={'_id': obj['_id']}, data={'sub_urls': obj['sub_urls']})
         
-        self.log.info("Spider", "run", "Spidering %s sites completed. %s new urls found." % new_url_count)
+        self.log.info("Spider", "run", "Spidering %s sites completed. %s new urls found (External: %s | Internal: %s)." % (
+            len(obj_list),
+            new_url_count,
+            len(external_urls),
+            new_url_count - len(external_urls)
+        ))
 
 if __name__ == '__main__':
     
