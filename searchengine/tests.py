@@ -11,6 +11,7 @@ from searchengine.logger import Logging
 from searchengine.main import SearchEngine, searchengine
 from searchengine.scraper import HTMLScraper, TagSelector
 from searchengine.search import SearchIndex
+from searchengine.spider import Spider
 from searchengine.sync import SyncDB
 
 def dummy_search_index():
@@ -37,6 +38,66 @@ def dummy_db(data):
     )
     id = database.insert(data)
     return database, id
+
+def clear_log(log_file):
+    file_buffer = open(log_file, "wb")
+    file_buffer.write("")
+    file_buffer.close()
+
+class LoggingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.log_file_name = "test.log"
+        self.logging = Logging(
+            log_file_name=self.log_file_name,
+            debug=True,
+        )
+        
+    def test_warning(self):
+        self.logging.warning("LoggingTestCase", "test_warning", "Test log message")
+        
+        # test that the log file has been generated
+        self.assertTrue(os.path.exists(self.logging.log_file))
+        
+        # test that the correct output has been stored in the first line of the log file
+        file_buffer = open(self.logging.log_file, "rb")
+        self.assertFalse(file_buffer.read().find('WARNING [LoggingTestCase.test_warning') == -1)
+        file_buffer.close()
+        
+    def test_info(self):
+        self.logging.info("LoggingTestCase", "test_info", "Test log message")
+        
+        # test that the log file has been generated
+        self.assertTrue(os.path.exists(self.logging.log_file))
+        
+        # test that the correct output has been stored in the first line of the log file
+        file_buffer = open(self.logging.log_file, "rb")
+        self.assertFalse(file_buffer.read().find('INFO [LoggingTestCase.test_info') == -1)
+        file_buffer.close()
+        
+    def test_error(self):
+        self.assertRaises(Exception, self.logging.error, ("LoggingTestCase", "test_error", "Test log message"))
+        
+        # test that the log file has been generated
+        self.assertTrue(os.path.exists(self.logging.log_file))
+        
+        # test that the correct output has been stored in the first line of the log file
+        file_buffer = open(self.logging.log_file, "rb")
+        self.assertFalse(file_buffer.read().find('ERROR [LoggingTestCase.test_error') == -1)
+        file_buffer.close()
+        
+    def test_critical(self):
+        self.assertRaises(Exception, self.logging.critical, ("LoggingTestCase", "test_critical", "Test log message"))
+        
+        # test that the log file has been generated
+        self.assertTrue(os.path.exists(self.logging.log_file))
+        
+        # test that the correct output has been stored in the first line of the log file
+        file_buffer = open(self.logging.log_file, "rb")
+        self.assertFalse(file_buffer.read().find('CRITICAL [LoggingTestCase.test_critical]') == -1)
+        file_buffer.close()
+    
+    def tearDown(self):
+        pass#clear_log(self.logging.log_file)
 
 class MongoDBTestCase(unittest.TestCase):
     def setUp(self):
@@ -94,6 +155,7 @@ class MongoDBTestCase(unittest.TestCase):
     
     def tearDown(self):
         self.database.remove()
+        clear_log(self.database.log.log_file_name)
 
 class ScraperTestCase(unittest.TestCase):
     def setUp(self):
@@ -219,6 +281,7 @@ class SyncDBTestCase(unittest.TestCase):
     def tearDown(self):
         self.syncdb.database.remove()
         os.remove(self.file_path)
+        clear_log(self.syncdb.log.log_file_name)
         
 class SpiderTestCase(unittest.TestCase):
     def setUp(self):
@@ -229,22 +292,16 @@ class SpiderTestCase(unittest.TestCase):
                 database_name='test_database',
             )
         )
+        self.url = "http://www.google.com"
         
-    def test_exists(self):
+    def test_get_links(self):
         
         # test that the url is tested as existing correctly
-        self.assertTrue(self.syncdb.exists("http://www.google.com"))
-        self.assertFalse(self.syncdb.exists("http://www.g.com"))
-        
-    def test_run(self):
-        
-        # test that the url is added to the db and the file is parsed correctly
-        self.syncdb.run()
-        self.assertEqual(self.syncdb.database.find().count(), 2)
+        self.assertTrue(self.spider.get_links(self.url) > 0)
     
     def tearDown(self):
-        self.syncdb.database.remove()
-        os.remove(self.file_path)
+        self.spider.database.remove()
+        clear_log(self.spider.log.log_file_name)
 
 if __name__ == '__main__':
     unittest.main()
