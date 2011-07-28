@@ -2,7 +2,7 @@
 
 from HTMLParser import HTMLParser, HTMLParseError
 import optparse
-import urllib2
+from urllib2 import urlopen, URLError
 
 from searchengine.logger import Logging
 
@@ -73,9 +73,10 @@ class HTMLScraper(object):
         Open and read the content of a URL.
         """
         try:
-            url_handler = urllib2.urlopen(self.url)
+            url_handler = urlopen(self.url)
         except URLError, e:
             self.log.warning("HTMLScraper", "get_url_content", e)
+            return ""
         
         html_content = url_handler.read()
         url_handler.close()
@@ -88,10 +89,12 @@ class HTMLScraper(object):
         """
         html_content = self.get_url_content()
         html_parser = TagSelector()
+        
         try:
             html_parser.feed(unicode(html_content, errors='replace'))
         except HTMLParseError, e:
             self.log.warning("HTMLScraper", "get_content", e)
+            return {}
         
         # get the content and update with the url scraped
         parsed_content = html_parser.get_data()
