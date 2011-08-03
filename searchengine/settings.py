@@ -21,6 +21,9 @@ CONNECTION_TIMEOUT = 15
 # whoosh index settings
 INDEX_PATH = "/tmp/searchengine"
 
+# spider settings
+MAX_SPIDER_PROCESSES = 10
+
 # crawler settings
 CRAWL_DEPTH = 3
 
