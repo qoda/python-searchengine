@@ -1,5 +1,5 @@
-NB: UNDER DEVELOPMENT
-=====================
+NB: NO LONGER UNDER DEVELOPMENT
+===============================
 
 
 python-searchengine
